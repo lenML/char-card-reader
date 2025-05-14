@@ -73,7 +73,7 @@
   <pre><code id="output">Waiting for character card...</code></pre>
 
   <script type="module">
-    import { CharCardReader } from "https://esm.run/@lenml/char-card-reader@latest";
+    import { CharacterCard } from "https://esm.run/@lenml/char-card-reader@1.0.3";
 
     const dropArea = document.getElementById("drop-area");
     const fileInput = document.getElementById("fileInput");
@@ -88,11 +88,12 @@
 
       try {
         const arrayBuffer = await file.arrayBuffer();
-        const reader = new CharCardReader(arrayBuffer);
+        const reader = await CharacterCard.from_file(arrayBuffer);
         const result = reader.toSpecV3();
         output.textContent = JSON.stringify(result, null, 2);
       } catch (err) {
         output.textContent = `❌ Failed to parse card:\n${err.message}`;
+        console.error(err)
       }
     }
 

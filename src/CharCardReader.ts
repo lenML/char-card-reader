@@ -19,7 +19,16 @@ export class CharacterCard {
     const image_b64: string = await toBase64(file);
     const fallback_avatar = `data:image/${exif_data.format};base64,${image_b64}`;
     const raw_data = this.parse_char_info(file, exif_data);
-    return new CharacterCard(raw_data, fallback_avatar);
+    return new CharacterCard(
+      {
+        // default as v1
+        spec: "chara_card_v1",
+        spec_version: "1.0",
+        data: {},
+        ...raw_data,
+      },
+      fallback_avatar
+    );
   }
   static parse_char_info(file: ArrayBuffer | Uint8Array, exif: ParsedMetadata) {
     let encoded_text: string | undefined;
@@ -119,7 +128,7 @@ export class CharacterCard {
 
   async get_avatar(without_fallback = false): Promise<string> {
     const fallback = without_fallback ? "" : this.fallback_avatar;
-    return [this.raw_data.avatar, this.raw_data.data.avatar, fallback].filter(
+    return [this.raw_data.avatar, this.raw_data.data?.avatar, fallback].filter(
       isValidImageUrl
     )[0];
   }
@@ -127,7 +136,7 @@ export class CharacterCard {
   get avatar(): CharacterSpec.Root["avatar"] {
     return [
       this.raw_data.avatar,
-      this.raw_data.data.avatar,
+      this.raw_data.data?.avatar,
       this.fallback_avatar,
     ].filter(isValidImageUrl)[0];
   }
@@ -143,9 +152,9 @@ export class CharacterCard {
   get name(): CharacterSpec.Data["name"] {
     switch (this.spec) {
       case "chara_card_v2":
-        return this.raw_data.data.name ?? this.raw_data.name;
+        return this.raw_data.data?.name ?? this.raw_data.name;
       case "chara_card_v3":
-        return this.raw_data.data.name ?? this.raw_data.name;
+        return this.raw_data.data?.name ?? this.raw_data.name;
       default:
         return this.raw_data.char_name ?? this.raw_data.name ?? "unknown";
     }
@@ -154,9 +163,9 @@ export class CharacterCard {
   get description(): CharacterSpec.Data["description"] {
     switch (this.spec) {
       case "chara_card_v2":
-        return this.raw_data.data.description ?? this.raw_data.description;
+        return this.raw_data.data?.description ?? this.raw_data.description;
       case "chara_card_v3":
-        return this.raw_data.data.description ?? this.raw_data.description;
+        return this.raw_data.data?.description ?? this.raw_data.description;
       default:
         return this.raw_data.description ?? "unknown";
     }
@@ -165,9 +174,9 @@ export class CharacterCard {
   get first_message(): CharacterSpec.Data["first_mes"] {
     switch (this.spec) {
       case "chara_card_v2":
-        return this.raw_data.data.first_mes ?? this.raw_data.first_mes;
+        return this.raw_data.data?.first_mes ?? this.raw_data.first_mes;
       case "chara_card_v3":
-        return this.raw_data.data.first_mes ?? this.raw_data.first_mes;
+        return this.raw_data.data?.first_mes ?? this.raw_data.first_mes;
       default:
         return this.raw_data.first_mes ?? "unknown";
     }
@@ -176,9 +185,9 @@ export class CharacterCard {
   get message_example(): CharacterSpec.Root["mes_example"] {
     switch (this.spec) {
       case "chara_card_v2":
-        return this.raw_data.data.mes_example ?? this.raw_data.mes_example;
+        return this.raw_data.data?.mes_example ?? this.raw_data.mes_example;
       case "chara_card_v3":
-        return this.raw_data.data.mes_example ?? this.raw_data.mes_example;
+        return this.raw_data.data?.mes_example ?? this.raw_data.mes_example;
       default:
         return this.raw_data.mes_example ?? "unknown";
     }
@@ -187,9 +196,9 @@ export class CharacterCard {
   get create_date(): CharacterSpec.Root["create_date"] {
     switch (this.spec) {
       case "chara_card_v2":
-        return this.raw_data.data.create_date ?? this.raw_data.create_date;
+        return this.raw_data.data?.create_date ?? this.raw_data.create_date;
       case "chara_card_v3":
-        return this.raw_data.data.create_date ?? this.raw_data.create_date;
+        return this.raw_data.data?.create_date ?? this.raw_data.create_date;
       default:
         return this.raw_data.create_date ?? "unknown";
     }
@@ -198,9 +207,9 @@ export class CharacterCard {
   get personality(): CharacterSpec.Data["personality"] {
     switch (this.spec) {
       case "chara_card_v2":
-        return this.raw_data.data.personality ?? this.raw_data.personality;
+        return this.raw_data.data?.personality ?? this.raw_data.personality;
       case "chara_card_v3":
-        return this.raw_data.data.personality ?? this.raw_data.personality;
+        return this.raw_data.data?.personality ?? this.raw_data.personality;
       default:
         return this.raw_data.personality ?? "unknown";
     }
@@ -209,9 +218,9 @@ export class CharacterCard {
   get scenario(): CharacterSpec.Data["scenario"] {
     switch (this.spec) {
       case "chara_card_v2":
-        return this.raw_data.data.scenario ?? this.raw_data.scenario;
+        return this.raw_data.data?.scenario ?? this.raw_data.scenario;
       case "chara_card_v3":
-        return this.raw_data.data.scenario ?? this.raw_data.scenario;
+        return this.raw_data.data?.scenario ?? this.raw_data.scenario;
       default:
         return this.raw_data.scenario ?? "unknown";
     }
@@ -220,9 +229,9 @@ export class CharacterCard {
   get alternate_greetings(): CharacterSpec.Data["alternate_greetings"] {
     switch (this.spec) {
       case "chara_card_v2":
-        return this.raw_data.data.alternate_greetings;
+        return this.raw_data.data?.alternate_greetings;
       case "chara_card_v3":
-        return this.raw_data.data.alternate_greetings;
+        return this.raw_data.data?.alternate_greetings;
       default:
         return [];
     }
@@ -231,9 +240,9 @@ export class CharacterCard {
   get character_book(): CharacterSpec.CharacterBook {
     switch (this.spec) {
       case "chara_card_v2":
-        return this.raw_data.data.character_book;
+        return this.raw_data.data?.character_book;
       case "chara_card_v3":
-        return this.raw_data.data.character_book;
+        return this.raw_data.data?.character_book;
       default:
         return {
           entries: [],
@@ -246,9 +255,9 @@ export class CharacterCard {
   get tags(): CharacterSpec.Data["tags"] {
     switch (this.spec) {
       case "chara_card_v2":
-        return this.raw_data.data.tags;
+        return this.raw_data.data?.tags;
       case "chara_card_v3":
-        return this.raw_data.data.tags;
+        return this.raw_data.data?.tags;
       default:
         return [];
     }
@@ -256,7 +265,7 @@ export class CharacterCard {
 
   public toSpecV1(): SpecV1.TavernCard {
     const getter = (key: string) =>
-      (this as any)[key] ?? this.raw_data[key] ?? this.raw_data.data[key];
+      (this as any)[key] ?? this.raw_data[key] ?? this.raw_data.data?.[key];
     return {
       name: getter("name") ?? getter("char_name"),
       description: getter("description"),
@@ -269,7 +278,7 @@ export class CharacterCard {
 
   public toSpecV2(): SpecV2.TavernCardV2 {
     const getter = (key: string) =>
-      (this as any)[key] ?? this.raw_data[key] ?? this.raw_data.data[key];
+      (this as any)[key] ?? this.raw_data[key] ?? this.raw_data.data?.[key];
     return deepClone({
       spec: "chara_card_v2",
       spec_version: "2.0",
@@ -298,7 +307,7 @@ export class CharacterCard {
 
   public toSpecV3(): SpecV3.CharacterCardV3 {
     const getter = (key: string) =>
-      (this as any)[key] ?? this.raw_data[key] ?? this.raw_data.data[key];
+      (this as any)[key] ?? this.raw_data[key] ?? this.raw_data.data?.[key];
     return deepClone({
       spec: "chara_card_v3",
       spec_version: "3.0",
