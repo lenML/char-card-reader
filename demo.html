@@ -4,42 +4,129 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Character Card Reader Demo</title>
+  <title>CharCardReader Demo</title>
   <style>
+    * {
+      margin: 0;
+      padding: 0;
+      border: 0;
+      box-sizing: inherit;
+    }
+
     body {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
       font-family: monospace;
-      padding: 1rem;
+      background-color: #121212;
+      color: #e0e0e0;
+      padding: 2rem;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    h1 {
+      color: #90caf9;
+    }
+
+    .drop-area {
+      border: 2px dashed #555;
+      padding: 2rem;
+      text-align: center;
+      border-radius: 10px;
+      margin-bottom: 1rem;
+      transition: background 0.3s;
+    }
+
+    .drop-area.dragover {
+      background: #1e1e1e;
+    }
+
+    input[type="file"] {
+      display: none;
     }
 
     pre {
-      background: #f4f4f4;
+      background: #1e1e1e;
       padding: 1rem;
       border-radius: 8px;
       overflow: auto;
+      white-space: pre-wrap;
+      flex: 1;
     }
   </style>
 </head>
 
 <body>
-  <h1>Character Card Reader Demo</h1>
-  <input type="file" id="file" accept="image/png, image/jpeg" />
-  <pre><code id="output">Please select a PNG/JPEG character card...</code></pre>
+  <h1>🧩 CharCardReader Web Demo</h1>
+
+  <div class="drop-area" id="drop-area">
+    <p>📂 Drop PNG/JPEG files here or click to upload</p>
+    <p>📋 Or paste a file directly</p>
+    <input type="file" id="fileInput" accept="image/png,image/jpeg" />
+  </div>
+
+  <pre><code id="output">Waiting for character card...</code></pre>
 
   <script type="module">
     import { CharCardReader } from "https://esm.run/@lenml/char-card-reader@latest";
 
-    const fileInput = document.getElementById("file");
+    const dropArea = document.getElementById("drop-area");
+    const fileInput = document.getElementById("fileInput");
     const output = document.getElementById("output");
 
-    fileInput.addEventListener("change", async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
+    // Core file handler
+    async function handleFile(file) {
+      if (!file || !file.type.startsWith("image/")) {
+        output.textContent = "❌ Unsupported file type.";
+        return;
+      }
 
-      const arrayBuffer = await file.arrayBuffer();
-      const reader = new CharCardReader(arrayBuffer);
-      const parsed = reader.parse();
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const reader = new CharCardReader(arrayBuffer);
+        const result = reader.parse();
+        output.textContent = JSON.stringify(result, null, 2);
+      } catch (err) {
+        output.textContent = `❌ Failed to parse card:\n${err.message}`;
+      }
+    }
 
-      output.textContent = JSON.stringify(parsed, null, 2);
+    // Drag & Drop
+    dropArea.addEventListener("click", () => fileInput.click());
+
+    window.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dropArea.classList.add("dragover");
+    });
+
+    window.addEventListener("dragleave", () => {
+      dropArea.classList.remove("dragover");
+    });
+
+    window.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropArea.classList.remove("dragover");
+      const file = e.dataTransfer.files[0];
+      handleFile(file);
+    });
+
+    // File Input
+    fileInput.addEventListener("change", () => {
+      const file = fileInput.files[0];
+      handleFile(file);
+    });
+
+    // Clipboard Paste
+    window.addEventListener("paste", (e) => {
+      const items = e.clipboardData.files;
+      if (items.length > 0) {
+        handleFile(items[0]);
+      }
     });
   </script>
 </body>
