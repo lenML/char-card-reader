@@ -1,7 +1,7 @@
 # Char Card Reader
 
-![NPM Downloads](https://img.shields.io/npm/dm/%40lenml%2Fchar-card-reader)
-![NPM Version](https://img.shields.io/npm/v/%40lenml%2Fchar-card-reader)
+[![NPM Downloads](https://img.shields.io/npm/dm/%40lenml%2Fchar-card-reader)](https://www.npmjs.com/package/@lenml/char-card-reader)
+[![NPM Version](https://img.shields.io/npm/v/%40lenml%2Fchar-card-reader)](https://www.npmjs.com/package/@lenml/char-card-reader)
 
 A lightweight library for reading SillyTavern character card metadata from image files (PNG, JPEG, WEBP) without external dependencies.
 
