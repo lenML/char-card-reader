@@ -1,6 +1,6 @@
 # char-card-reader
 
-character card info reader
+SillyTavern character card info reader without third-package.
 
 refs:
 

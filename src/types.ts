@@ -52,6 +52,7 @@ export namespace CharacterSpec {
   export interface CharacterBook {
     entries: Entry[];
     name: string;
+    extensions: Record<string, any>;
   }
 
   export interface Entry {
@@ -64,7 +65,7 @@ export namespace CharacterSpec {
     selective: boolean;
     insertion_order: number;
     enabled: boolean;
-    position: string;
+    position: "before_char" | "after_char";
     use_regex: boolean;
     extensions: Extensions2;
   }
@@ -100,3 +101,30 @@ export namespace CharacterSpec {
     match_creator_notes: boolean;
   }
 }
+
+export type PngChunk = {
+  type: string;
+  length: number;
+  crc: number;
+  [key: string]: any;
+};
+
+export type JpegSegment = {
+  marker: string;
+  offset: number;
+  length: number;
+  type: string;
+  preview: string;
+  comment?: string;
+};
+export type WebPChunk = {
+  type: string;
+  offset: number;
+  length: number;
+  preview: string;
+};
+
+export type ParsedMetadata =
+  | { format: "png"; chunks: PngChunk[] }
+  | { format: "jpeg"; segments: JpegSegment[] }
+  | { format: "webp"; chunks: WebPChunk[] };

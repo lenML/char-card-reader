@@ -1,22 +1,4 @@
-type PngChunk = {
-  type: string;
-  length: number;
-  crc: number;
-  [key: string]: any;
-};
-
-type JpegSegment = {
-  marker: string;
-  offset: number;
-  length: number;
-  type: string;
-  preview: string;
-  comment?: string;
-};
-
-type ParsedMetadata =
-  | { format: "png"; chunks: PngChunk[] }
-  | { format: "jpeg"; segments: JpegSegment[] };
+import { ParsedMetadata, PngChunk, JpegSegment, WebPChunk } from "./types";
 
 export function parseImageMetadata(
   buffer: ArrayBuffer | Uint8Array
@@ -27,6 +9,9 @@ export function parseImageMetadata(
     .slice(0, 8)
     .every((b, i) => b === [137, 80, 78, 71, 13, 10, 26, 10][i]);
   const isJpeg = data[0] === 0xff && data[1] === 0xd8;
+  const isWebP =
+    String.fromCharCode(...data.slice(0, 4)) === "RIFF" &&
+    String.fromCharCode(...data.slice(8, 12)) === "WEBP";
 
   if (isPng) {
     return {
@@ -39,6 +24,13 @@ export function parseImageMetadata(
     return {
       format: "jpeg",
       segments: parseJpegSegments(data),
+    };
+  }
+
+  if (isWebP) {
+    return {
+      format: "webp",
+      chunks: parseWebPChunks(data),
     };
   }
 
@@ -171,4 +163,44 @@ function parseJpegSegments(data: Uint8Array): JpegSegment[] {
   }
 
   return segments;
+}
+function parseWebPChunks(data: Uint8Array): WebPChunk[] {
+  const chunks: WebPChunk[] = [];
+
+  let offset = 12; // skip RIFF header (12 bytes)
+  const len = data.length;
+
+  while (offset + 8 <= len) {
+    const type = String.fromCharCode(
+      data[offset],
+      data[offset + 1],
+      data[offset + 2],
+      data[offset + 3]
+    );
+
+    const chunkLength =
+      data[offset + 4] |
+      (data[offset + 5] << 8) |
+      (data[offset + 6] << 16) |
+      (data[offset + 7] << 24);
+
+    const payloadStart = offset + 8;
+    const payloadEnd = payloadStart + chunkLength;
+
+    if (payloadEnd > len) break;
+
+    chunks.push({
+      type,
+      offset,
+      length: chunkLength,
+      preview: Array.from(data.slice(payloadStart, payloadStart + 16))
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join(" "),
+    });
+
+    // chunks are padded to even sizes
+    offset = payloadEnd + (chunkLength % 2);
+  }
+
+  return chunks;
 }

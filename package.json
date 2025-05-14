@@ -1,7 +1,7 @@
 {
   "name": "@lenml/char-card-reader",
-  "version": "1.0.0",
-  "description": "character card info reader",
+  "version": "1.0.1",
+  "description": "SillyTavern character card info reader",
   "main": "dist/main.js",
   "module": "dist/main.mjs",
   "types": "dist/main.d.ts",
@@ -25,7 +25,14 @@
     "dist",
     "src"
   ],
-  "keywords": [],
+  "keywords": [
+    "character",
+    "AI",
+    "LLM",
+    "roleplay",
+    "SillyTavern",
+    "酒馆"
+  ],
   "author": "lenml",
   "license": "AGPL-3.0-only",
   "publishConfig": {
