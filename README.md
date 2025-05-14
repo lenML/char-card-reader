@@ -1,6 +1,11 @@
 # char-card-reader
 
-char-card-reader
+character card info reader
+
+refs:
+
+- spec_v3: https://github.com/kwaroran/character-card-spec-v3/blob/main/SPEC_V3.md
+- spec_v2: https://github.com/malfoyslastname/character-card-spec-v2
 
 # usage
 
