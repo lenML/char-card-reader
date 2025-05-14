@@ -1,34 +1,27 @@
 import { parseImageMetadata } from "./MetadataReader";
+import { SpecV1 } from "./spec_v1";
+import { SpecV2 } from "./spec_v2";
 import { SpecV3 } from "./spec_v3";
 import { ParsedMetadata } from "./types";
 import { CharacterSpec } from "./types";
 import { deepClone, isValidImageUrl, toBase64 } from "./utils";
 
-export class CharCardReader {
-  card_info = {
-    spec: "unknown",
-    spec_version: "unknown",
-    data: {} as any,
-  } as {
-    spec: string;
-    spec_version: string;
-    data: any;
-    [key: string]: any;
-  };
+type CharRawData = {
+  spec: string;
+  spec_version: string;
+  data: any;
+  [key: string]: any;
+};
 
-  fallback_avatar = "";
-
-  exif_data: ParsedMetadata;
-
-  constructor(readonly file: ArrayBuffer | Uint8Array) {
-    this.exif_data = parseImageMetadata(this.file);
-    // update fallback
-    this.get_fallback_avatar();
+export class CharacterCard {
+  static async from_file(file: ArrayBuffer | Uint8Array) {
+    const exif_data = parseImageMetadata(file);
+    const image_b64: string = await toBase64(file);
+    const fallback_avatar = `data:image/${exif_data.format};base64,${image_b64}`;
+    const raw_data = this.parse_char_info(file, exif_data);
+    return new CharacterCard(raw_data, fallback_avatar);
   }
-
-  private parse_char_info() {
-    const exif = this.exif_data;
-
+  static parse_char_info(file: ArrayBuffer | Uint8Array, exif: ParsedMetadata) {
     let encoded_text: string | undefined;
 
     if (exif.format === "png") {
@@ -41,9 +34,7 @@ export class CharCardReader {
       const exifChunk = exif.chunks.find((x) => x.type === "EXIF");
       if (exifChunk) {
         const exifData = this.extractUserCommentFromExif(
-          this.file instanceof Uint8Array
-            ? this.file
-            : new Uint8Array(this.file),
+          file instanceof Uint8Array ? file : new Uint8Array(file),
           exifChunk.offset + 8
         );
         encoded_text = exifData;
@@ -59,7 +50,7 @@ export class CharCardReader {
     return json;
   }
 
-  private extractUserCommentFromExif(
+  static extractUserCommentFromExif(
     data: Uint8Array,
     offset: number
   ): string | undefined {
@@ -124,128 +115,114 @@ export class CharCardReader {
     return undefined;
   }
 
-  parse() {
-    const chara = this.parse_char_info();
-    this.card_info = {
-      ...this.card_info,
-      ...chara,
-    };
-    return this.card_info;
-  }
-
-  private async get_fallback_avatar() {
-    if (this.fallback_avatar) return this.fallback_avatar;
-    const image_b64: string = await toBase64(this.file);
-    this.fallback_avatar = `data:image/${this.exif_data.format};base64,${image_b64}`;
-    return this.fallback_avatar;
-  }
+  constructor(readonly raw_data: CharRawData, readonly fallback_avatar = "") {}
 
   async get_avatar(without_fallback = false): Promise<string> {
-    const fallback = without_fallback ? "" : await this.get_fallback_avatar();
-    return [this.card_info.avatar, this.card_info.data.avatar, fallback].filter(
+    const fallback = without_fallback ? "" : this.fallback_avatar;
+    return [this.raw_data.avatar, this.raw_data.data.avatar, fallback].filter(
       isValidImageUrl
     )[0];
   }
 
   get avatar(): CharacterSpec.Root["avatar"] {
     return [
-      this.card_info.avatar,
-      this.card_info.data.avatar,
+      this.raw_data.avatar,
+      this.raw_data.data.avatar,
       this.fallback_avatar,
     ].filter(isValidImageUrl)[0];
   }
 
   get spec(): CharacterSpec.Root["spec"] {
-    return this.card_info.spec || "unknown";
+    return this.raw_data.spec || "unknown";
   }
 
   get spec_version(): CharacterSpec.Root["spec_version"] {
-    return this.card_info.spec_version || "unknown";
+    return this.raw_data.spec_version || "unknown";
   }
 
   get name(): CharacterSpec.Data["name"] {
     switch (this.spec) {
       case "chara_card_v2":
-        return this.card_info.data.name ?? this.card_info.name;
+        return this.raw_data.data.name ?? this.raw_data.name;
       case "chara_card_v3":
-        return this.card_info.data.name ?? this.card_info.name;
+        return this.raw_data.data.name ?? this.raw_data.name;
       default:
-        return this.card_info.char_name ?? this.card_info.name ?? "unknown";
+        return this.raw_data.char_name ?? this.raw_data.name ?? "unknown";
     }
   }
 
   get description(): CharacterSpec.Data["description"] {
     switch (this.spec) {
       case "chara_card_v2":
-        return this.card_info.data.description ?? this.card_info.description;
+        return this.raw_data.data.description ?? this.raw_data.description;
       case "chara_card_v3":
-        return this.card_info.data.description ?? this.card_info.description;
+        return this.raw_data.data.description ?? this.raw_data.description;
       default:
-        return this.card_info.description ?? "unknown";
+        return this.raw_data.description ?? "unknown";
     }
   }
 
   get first_message(): CharacterSpec.Data["first_mes"] {
     switch (this.spec) {
       case "chara_card_v2":
-        return this.card_info.data.first_mes ?? this.card_info.first_mes;
+        return this.raw_data.data.first_mes ?? this.raw_data.first_mes;
       case "chara_card_v3":
-        return this.card_info.data.first_mes ?? this.card_info.first_mes;
+        return this.raw_data.data.first_mes ?? this.raw_data.first_mes;
       default:
-        return this.card_info.first_mes ?? "unknown";
+        return this.raw_data.first_mes ?? "unknown";
     }
   }
 
   get message_example(): CharacterSpec.Root["mes_example"] {
     switch (this.spec) {
       case "chara_card_v2":
-        return this.card_info.data.mes_example ?? this.card_info.mes_example;
+        return this.raw_data.data.mes_example ?? this.raw_data.mes_example;
       case "chara_card_v3":
-        return this.card_info.data.mes_example ?? this.card_info.mes_example;
+        return this.raw_data.data.mes_example ?? this.raw_data.mes_example;
       default:
-        return this.card_info.mes_example ?? "unknown";
+        return this.raw_data.mes_example ?? "unknown";
     }
   }
 
   get create_date(): CharacterSpec.Root["create_date"] {
     switch (this.spec) {
       case "chara_card_v2":
-        return this.card_info.data.create_date ?? this.card_info.create_date;
+        return this.raw_data.data.create_date ?? this.raw_data.create_date;
       case "chara_card_v3":
-        return this.card_info.data.create_date ?? this.card_info.create_date;
+        return this.raw_data.data.create_date ?? this.raw_data.create_date;
       default:
-        return this.card_info.create_date ?? "unknown";
+        return this.raw_data.create_date ?? "unknown";
     }
   }
 
   get personality(): CharacterSpec.Data["personality"] {
     switch (this.spec) {
       case "chara_card_v2":
-        return this.card_info.data.personality ?? this.card_info.personality;
+        return this.raw_data.data.personality ?? this.raw_data.personality;
       case "chara_card_v3":
-        return this.card_info.data.personality ?? this.card_info.personality;
+        return this.raw_data.data.personality ?? this.raw_data.personality;
       default:
-        return this.card_info.personality ?? "unknown";
+        return this.raw_data.personality ?? "unknown";
     }
   }
 
   get scenario(): CharacterSpec.Data["scenario"] {
     switch (this.spec) {
       case "chara_card_v2":
-        return this.card_info.data.scenario ?? this.card_info.scenario;
+        return this.raw_data.data.scenario ?? this.raw_data.scenario;
       case "chara_card_v3":
-        return this.card_info.data.scenario ?? this.card_info.scenario;
+        return this.raw_data.data.scenario ?? this.raw_data.scenario;
       default:
-        return this.card_info.scenario ?? "unknown";
+        return this.raw_data.scenario ?? "unknown";
     }
   }
 
   get alternate_greetings(): CharacterSpec.Data["alternate_greetings"] {
     switch (this.spec) {
       case "chara_card_v2":
-        return this.card_info.data.alternate_greetings;
+        return this.raw_data.data.alternate_greetings;
       case "chara_card_v3":
-        return this.card_info.data.alternate_greetings;
+        return this.raw_data.data.alternate_greetings;
       default:
         return [];
     }
@@ -254,9 +231,9 @@ export class CharCardReader {
   get character_book(): CharacterSpec.CharacterBook {
     switch (this.spec) {
       case "chara_card_v2":
-        return this.card_info.data.character_book;
+        return this.raw_data.data.character_book;
       case "chara_card_v3":
-        return this.card_info.data.character_book;
+        return this.raw_data.data.character_book;
       default:
         return {
           entries: [],
@@ -269,21 +246,64 @@ export class CharCardReader {
   get tags(): CharacterSpec.Data["tags"] {
     switch (this.spec) {
       case "chara_card_v2":
-        return this.card_info.data.tags;
+        return this.raw_data.data.tags;
       case "chara_card_v3":
-        return this.card_info.data.tags;
+        return this.raw_data.data.tags;
       default:
         return [];
     }
   }
 
+  public toSpecV1(): SpecV1.TavernCard {
+    const getter = (key: string) =>
+      (this as any)[key] ?? this.raw_data[key] ?? this.raw_data.data[key];
+    return {
+      name: getter("name") ?? getter("char_name"),
+      description: getter("description"),
+      personality: getter("personality"),
+      scenario: getter("scenario"),
+      first_mes: getter("first_mes"),
+      mes_example: getter("mes_example"),
+    };
+  }
+
+  public toSpecV2(): SpecV2.TavernCardV2 {
+    const getter = (key: string) =>
+      (this as any)[key] ?? this.raw_data[key] ?? this.raw_data.data[key];
+    return deepClone({
+      spec: "chara_card_v2",
+      spec_version: "2.0",
+      data: {
+        // fields from CCV2
+        name: getter("name") ?? getter("char_name"),
+        description: getter("description"),
+        mes_example: getter("mes_example"),
+        first_mes: getter("first_mes"),
+        personality: getter("personality"),
+        scenario: getter("scenario"),
+        // New fields start here
+        creator_notes: getter("creator_notes"),
+        system_prompt: getter("system_prompt"),
+        post_history_instructions: getter("post_history_instructions"),
+        alternate_greetings: getter("alternate_greetings"),
+        character_book: getter("character_book"),
+        // May 8th additions
+        tags: getter("tags"),
+        creator: getter("creator"),
+        character_version: getter("character_version"),
+        extensions: getter("extensions"),
+      },
+    });
+  }
+
   public toSpecV3(): SpecV3.CharacterCardV3 {
     const getter = (key: string) =>
-      (this as any)[key] ?? this.card_info[key] ?? this.card_info.data[key];
+      (this as any)[key] ?? this.raw_data[key] ?? this.raw_data.data[key];
     return deepClone({
       spec: "chara_card_v3",
       spec_version: "3.0",
       data: {
+        // fields from CCV2
         name: getter("name") ?? getter("char_name"),
         description: getter("description"),
         tags: getter("tags"),
@@ -297,8 +317,10 @@ export class CharCardReader {
         alternate_greetings: getter("alternate_greetings"),
         personality: getter("personality"),
         scenario: getter("scenario"),
+        //Changes from CCV2
         creator_notes: getter("creator_notes"),
         character_book: getter("character_book"),
+        //New fields in CCV3
         assets: getter("assets"),
         nickname: getter("nickname"),
         creator_notes_multilingual: getter("creator_notes_multilingual"),

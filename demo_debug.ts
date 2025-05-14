@@ -1,4 +1,4 @@
-import { CharCardReader, parseImageMetadata } from "./src/main";
+import { CharacterCard, parseImageMetadata } from "./src/main";
 import fs from "fs";
 import path from "path";
 
@@ -11,8 +11,8 @@ async function main(...args) {
     throw new Error(`File not found: ${filepath}`);
   }
   const file = fs.readFileSync(filepath);
-  const reader = new CharCardReader(file);
-  const char_card = await reader.parse();
+  const reader = await CharacterCard.from_file(file);
+  const char_card = reader.toSpecV3();
   // console.log("data", char_card);
   fs.writeFileSync("./eg_char_card.json", JSON.stringify(char_card, null, 2));
   console.log(`save to ${path.join(process.cwd(), "eg_char_card.json")}`);
