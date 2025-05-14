@@ -341,30 +341,3 @@ export class CharacterCard {
     });
   }
 }
-
-// const test = async () => {
-//   const file = fs.readFileSync(
-//     path.join(
-//       __dirname,
-//       'main_ada-wong-your-seductive-gf-8b7a667a_spec_v2.png',
-//     ),
-//   );
-//   // const file = fs.readFileSync(
-//   //   path.join(__dirname, 'main_the-tycoons-aloof-ex-wife-07a91606_spec_v2.png'),
-//   // );
-//   const reader = new CharCardReader(file);
-//   await reader.ready;
-//   console.log('spec:', reader.spec);
-//   console.log('spec_version:', reader.spec_version);
-//   console.log('name:', reader.name);
-//   console.log('description:', reader.description);
-//   console.log('first_message:', reader.first_message);
-//   console.log('card_info:', reader.card_info);
-
-//   fs.writeFileSync(
-//     'card_info5.json',
-//     JSON.stringify(reader.card_info, null, 2),
-//   );
-// };
-
-// test();
