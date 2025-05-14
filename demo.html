@@ -89,7 +89,7 @@
       try {
         const arrayBuffer = await file.arrayBuffer();
         const reader = new CharCardReader(arrayBuffer);
-        const result = reader.parse();
+        const result = reader.toSpecV3();
         output.textContent = JSON.stringify(result, null, 2);
       } catch (err) {
         output.textContent = `❌ Failed to parse card:\n${err.message}`;
