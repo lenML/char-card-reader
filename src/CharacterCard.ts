@@ -1,10 +1,11 @@
+import { CharacterBook } from "./CharacterBook";
 import { parseImageMetadata } from "./MetadataReader";
 import { SpecV1 } from "./spec_v1";
 import { SpecV2 } from "./spec_v2";
 import { SpecV3 } from "./spec_v3";
 import { ParsedMetadata } from "./types";
 import { CharacterSpec } from "./types";
-import { deepClone, isValidImageUrl, toBase64 } from "./utils";
+import { Base64, deepClone, isValidImageUrl, toBase64 } from "./utils";
 
 type CharRawData = {
   spec: string;
@@ -54,7 +55,7 @@ export class CharacterCard {
       return {};
     }
 
-    const json_str = Buffer.from(encoded_text, "base64").toString("utf-8");
+    const json_str = Base64.decode(encoded_text);
     const json = JSON.parse(json_str);
     return json;
   }
@@ -339,5 +340,9 @@ export class CharacterCard {
         modification_date: getter("modify_date") ?? getter("modification_date"),
       },
     });
+  }
+
+  public get_book() {
+    return CharacterBook.from_json(this.raw_data);
   }
 }

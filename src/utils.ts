@@ -62,3 +62,25 @@ export function isValidImageUrl(url: any) {
 export const deepClone: <T>(x: T) => T = globalThis.structuredClone
   ? globalThis.structuredClone
   : <T>(x: T): T => JSON.parse(JSON.stringify(x));
+
+export class Base64 {
+  static encode(input: string): string {
+    if (typeof window !== "undefined" && typeof window.btoa === "function") {
+      return window.btoa(unescape(encodeURIComponent(input)));
+    } else if (typeof Buffer !== "undefined") {
+      return Buffer.from(input, "utf-8").toString("base64");
+    } else {
+      throw new Error("Base64.encode: Environment not supported.");
+    }
+  }
+
+  static decode(base64: string): string {
+    if (typeof window !== "undefined" && typeof window.atob === "function") {
+      return decodeURIComponent(escape(window.atob(base64)));
+    } else if (typeof Buffer !== "undefined") {
+      return Buffer.from(base64, "base64").toString("utf-8");
+    } else {
+      throw new Error("Base64.decode: Environment not supported.");
+    }
+  }
+}

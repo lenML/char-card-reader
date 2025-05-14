@@ -93,6 +93,31 @@ import fs from "fs";
 - `toSpecV2()` - Converts to v2 spec format
 - `toSpecV3()` - Converts to v3 spec format
 
+### CharacterBook (Lorebook)
+
+from character card
+
+```ts
+import { CharacterCard } from "@lenml/char-card-reader";
+const file = fs.readFileSync("./path/to/character.png");
+const card = await CharacterCard.from_file(file);
+const book = card.get_book();
+const entries = book.scan(card.first_message);
+```
+
+from json data
+
+```ts
+import { CharacterBook } from "@lenml/char-card-reader";
+const json_data = {
+  entries: [
+    /*...*/
+  ],
+};
+const book = CharacterBook.from_json(json_data);
+const entries = book.scan("this xxoo world.");
+```
+
 ## Supported Specifications
 
 - [Spec v1](https://github.com/malfoyslastname/character-card-spec-v2/blob/main/spec_v1.md)
