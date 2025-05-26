@@ -118,7 +118,11 @@ const book = CharacterBook.from_json(json_data);
 const entries = book.scan("this xxoo world.");
 ```
 
-## Supported Specifications
+## Document
+
+click to [[Read generated document]](https://lenml.github.io/char-card-reader/)
+
+## Specifications References
 
 - [Spec v1](https://github.com/malfoyslastname/character-card-spec-v2/blob/main/spec_v1.md)
 - [Spec v2](https://github.com/malfoyslastname/character-card-spec-v2)
