@@ -20,7 +20,7 @@
     "test": "jest",
     "dev": "tsx watch",
     "prepublish": "pnpm build",
-    "build:doc": "typedoc --skipErrorChecking"
+    "build:docs": "typedoc --skipErrorChecking"
   },
   "files": [
     "dist",
