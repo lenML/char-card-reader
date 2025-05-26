@@ -139,3 +139,4 @@ dist
 eg_*.json
 
 !tests/data/*.png
+/docs
