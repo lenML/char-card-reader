@@ -1,18 +1,20 @@
 import { CharacterBook } from "./CharacterBook";
-import { parseImageMetadata } from "./MetadataReader";
+import {
+  extractUserCommentFromWebPChunk,
+  parseImageMetadata,
+} from "./MetadataReader";
 import { SpecV1 } from "./spec_v1";
 import { SpecV2 } from "./spec_v2";
 import { SpecV3 } from "./spec_v3";
-import { ParsedMetadata } from "./types";
+import { CharacterCardParserError, CharRawData, ParsedMetadata } from "./types";
 import { CharacterSpec } from "./types";
-import { Base64, deepClone, isValidImageUrl, toBase64 } from "./utils";
-
-type CharRawData = {
-  spec: string;
-  spec_version: string;
-  data: any;
-  [key: string]: any;
-};
+import {
+  Base64,
+  deepClone,
+  isValidImageUrl,
+  mergeObjects,
+  toBase64,
+} from "./utils";
 
 export class CharacterCard {
   static async from_file(file: ArrayBuffer | Uint8Array) {
@@ -31,6 +33,11 @@ export class CharacterCard {
       fallback_avatar
     );
   }
+
+  static from_json(raw_data: CharRawData, fallback_avatar = "") {
+    return new CharacterCard(raw_data, fallback_avatar);
+  }
+
   static parse_char_info(file: ArrayBuffer | Uint8Array, exif: ParsedMetadata) {
     let encoded_text: string | undefined;
 
@@ -43,86 +50,23 @@ export class CharacterCard {
     } else if (exif.format === "webp") {
       const exifChunk = exif.chunks.find((x) => x.type === "EXIF");
       if (exifChunk) {
-        const exifData = this.extractUserCommentFromExif(
+        const exifData = extractUserCommentFromWebPChunk(
           file instanceof Uint8Array ? file : new Uint8Array(file),
-          exifChunk.offset + 8
+          exifChunk
         );
         encoded_text = exifData;
       }
     }
 
     if (!encoded_text) {
-      return {};
+      throw new CharacterCardParserError(
+        "Failed to extract chara card data from image"
+      );
     }
 
     const json_str = Base64.decode(encoded_text);
     const json = JSON.parse(json_str);
     return json;
-  }
-
-  static extractUserCommentFromExif(
-    data: Uint8Array,
-    offset: number
-  ): string | undefined {
-    // TIFF header starts at EXIF offset
-    const byteOrder = String.fromCharCode(data[offset], data[offset + 1]);
-    const littleEndian = byteOrder === "II";
-    const readU16 = (off: number) =>
-      littleEndian
-        ? data[off] | (data[off + 1] << 8)
-        : (data[off] << 8) | data[off + 1];
-    const readU32 = (off: number) =>
-      littleEndian
-        ? data[off] |
-          (data[off + 1] << 8) |
-          (data[off + 2] << 16) |
-          (data[off + 3] << 24)
-        : (data[off] << 24) |
-          (data[off + 1] << 16) |
-          (data[off + 2] << 8) |
-          data[off + 3];
-
-    const tiffOffset = offset;
-    const firstIFDOffset = readU32(offset + 4);
-    const ifdOffset = tiffOffset + firstIFDOffset;
-    const numEntries = readU16(ifdOffset);
-
-    for (let i = 0; i < numEntries; i++) {
-      const entryOffset = ifdOffset + 2 + i * 12;
-      const tag = readU16(entryOffset);
-      const type = readU16(entryOffset + 2);
-      const count = readU32(entryOffset + 4);
-      const valueOffset = entryOffset + 8;
-
-      if (tag === 0x9286) {
-        // UserComment
-        let valuePtr = readU32(valueOffset);
-        if (count <= 4) {
-          valuePtr = valueOffset; // value is embedded directly
-        } else {
-          valuePtr = tiffOffset + valuePtr;
-        }
-
-        const raw = data.slice(valuePtr, valuePtr + count);
-        // Skip known EXIF encodings
-        const asciiPrefix = "ASCII\0\0\0";
-        const utf8Prefix = "UTF8\0\0\0";
-        const header = String.fromCharCode(...raw.slice(0, 8));
-
-        let comment = "";
-
-        if (header.startsWith(asciiPrefix) || header.startsWith(utf8Prefix)) {
-          comment = new TextDecoder("utf-8").decode(raw.slice(8));
-        } else {
-          // fallback: try decode full raw
-          comment = new TextDecoder("utf-8").decode(raw);
-        }
-
-        return comment;
-      }
-    }
-
-    return undefined;
   }
 
   constructor(readonly raw_data: CharRawData, readonly fallback_avatar = "") {}
@@ -264,6 +208,19 @@ export class CharacterCard {
     }
   }
 
+  /**
+   * Converts the current character card data to the SpecV1 format.
+   *
+   * This method constructs a SpecV1.TavernCard object by extracting the necessary
+   * fields from the current instance's raw data using a getter function. The function
+   * retrieves data from multiple sources, including instance properties, the raw data
+   * object, and its nested data object. The resulting object contains fields defined
+   * in the chara_card_v1 specification, such as name, description, personality, scenario,
+   * first message, and example messages.
+   *
+   * @returns A SpecV1.TavernCard object representing the character card data in SpecV1 format.
+   */
+
   public toSpecV1(): SpecV1.TavernCard {
     const getter = (key: string) =>
       (this as any)[key] ?? this.raw_data[key] ?? this.raw_data.data?.[key];
@@ -276,6 +233,20 @@ export class CharacterCard {
       mes_example: getter("mes_example"),
     };
   }
+
+  /**
+   * Converts the current character card data to the SpecV2 format.
+   *
+   * This method constructs a SpecV2.TavernCardV2 object by extracting the necessary
+   * fields from the current instance's raw data using a getter function. The function
+   * retrieves data from multiple sources, including instance properties, the raw data
+   * object, and its nested data object. The resulting object contains fields defined
+   * in the chara_card_v2 specification, including additional fields introduced in
+   * later updates.
+   *
+   * @returns A deep-cloned SpecV2.TavernCardV2 object representing the character card
+   *          data in SpecV2 format.
+   */
 
   public toSpecV2(): SpecV2.TavernCardV2 {
     const getter = (key: string) =>
@@ -305,6 +276,19 @@ export class CharacterCard {
       },
     });
   }
+
+  /**
+   * Converts the current character card data to the SpecV3 format.
+   *
+   * This function utilizes a getter to retrieve properties from the
+   * character card's raw data and returns a deep-cloned object
+   * conforming to the SpecV3.CharacterCardV3 structure. It includes
+   * fields from the CCV2 specification, changes specific to CCV3,
+   * and new fields introduced in CCV3.
+   *
+   * @returns A deep-cloned object representing the character card data
+   * in SpecV3 format.
+   */
 
   public toSpecV3(): SpecV3.CharacterCardV3 {
     const getter = (key: string) =>
@@ -339,6 +323,60 @@ export class CharacterCard {
         creation_date: getter("create_date") ?? getter("creation_date"),
         modification_date: getter("modify_date") ?? getter("modification_date"),
       },
+    });
+  }
+
+  /**
+   *  Returns the maximum compatible version of the character card
+   *
+   *  this card => merge(v1,v2,v3);
+   */
+  public toMaxCompatibleSpec():
+    | SpecV3.CharacterCardV3
+    | SpecV2.TavernCardV2
+    | SpecV1.TavernCard {
+    return mergeObjects(this.toSpecV1(), this.toSpecV2(), this.toSpecV3());
+  }
+
+  /**
+   * Creates a clone of the current CharacterCard instance in the specified version format.
+   *
+   * This method generates a new CharacterCard object with the data formatted to match
+   * the specified version's specification. It supports conversion to SpecV1, SpecV2, and
+   * SpecV3 formats by utilizing the respective `toSpecV1`, `toSpecV2`, and `toSpecV3` methods.
+   *
+   * @param version - The specification version ("v1", "v2", or "v3") to clone the character card into.
+   *                  Defaults to "v3" if not specified.
+   *
+   * @returns A new CharacterCard instance formatted according to the specified version.
+   *
+   * @throws Will throw an error if the specified version is unsupported.
+   */
+
+  public clone(version = "v3" as "v1" | "v2" | "v3") {
+    let new_raw_data = null;
+    switch (version) {
+      case "v1": {
+        new_raw_data = this.toSpecV1();
+        break;
+      }
+      case "v2": {
+        new_raw_data = this.toSpecV2();
+        break;
+      }
+      case "v3": {
+        new_raw_data = this.toSpecV3();
+        break;
+      }
+      default: {
+        throw new Error(`Unsupported version ${version}`);
+      }
+    }
+    return CharacterCard.from_json({
+      spec: "chara_card_v1",
+      spec_version: "1.0",
+      data: {},
+      ...new_raw_data,
     });
   }
 

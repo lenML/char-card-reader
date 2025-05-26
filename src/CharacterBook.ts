@@ -1,9 +1,5 @@
 import { SpecV3 } from "./spec_v3";
-import { deepClone } from "./utils";
-
-function uniq<T>(arr: T[]): T[] {
-  return Array.from(new Set(arr));
-}
+import { deepClone, uniq } from "./utils";
 
 // lorebook
 export class CharacterBook implements SpecV3.Lorebook {

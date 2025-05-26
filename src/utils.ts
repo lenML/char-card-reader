@@ -84,3 +84,72 @@ export class Base64 {
     }
   }
 }
+
+function isDeepEqual(a: any, b: any) {
+  if (a === b) {
+    return true;
+  }
+  if (
+    a === null ||
+    b === null ||
+    typeof a !== "object" ||
+    typeof b !== "object"
+  ) {
+    return false;
+  }
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) {
+      return false;
+    }
+    for (let i = 0; i < a.length; i++) {
+      if (!isDeepEqual(a[i], b[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
+  const keys = Object.keys(a);
+  if (keys.length !== Object.keys(b).length) {
+    return false;
+  }
+  for (const key of keys) {
+    if (!isDeepEqual(a[key], b[key])) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function isObject(x: any): x is object {
+  return typeof x === "object" && x !== null;
+}
+function isNoNone(x: any): x is any {
+  return x !== undefined && x !== null;
+}
+/**
+ * Recursively merge objects into a single object.
+ *
+ * If all values for a key are objects, merge them recursively.
+ * If any value for a key is not an object, take the last non-null value.
+ * @param {...any[]} objects objects to merge
+ * @returns merged object
+ */
+export function mergeObjects(...objects: any[]): any {
+  const keys = new Set(objects.flatMap(Object.keys));
+  return Object.fromEntries(
+    Array.from(keys).map((key) => {
+      const vals = objects.map((x) => x[key]);
+      if (vals.some(Array.isArray)) {
+        // NOTE: 直接用最后一个非空，数组没有合并逻辑
+        return [key, [...vals].reverse().filter(isNoNone).filter(Boolean)[0]];
+      }
+      if (vals.some(isObject)) {
+        return [key, mergeObjects(...vals.filter(isObject))];
+      }
+      return [key, [...vals].reverse().filter(isNoNone)[0]];
+    })
+  );
+}
+export function uniq<T>(arr: T[]): T[] {
+  return Array.from(new Set(arr));
+}

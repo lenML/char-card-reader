@@ -204,3 +204,69 @@ function parseWebPChunks(data: Uint8Array): WebPChunk[] {
 
   return chunks;
 }
+
+export function extractUserCommentFromWebPChunk(
+  data: Uint8Array,
+  chunk: WebPChunk
+) {
+  const offset = chunk.offset + 8;
+  // TIFF header starts at EXIF offset
+  const byteOrder = String.fromCharCode(data[offset], data[offset + 1]);
+  const littleEndian = byteOrder === "II";
+  const readU16 = (off: number) =>
+    littleEndian
+      ? data[off] | (data[off + 1] << 8)
+      : (data[off] << 8) | data[off + 1];
+  const readU32 = (off: number) =>
+    littleEndian
+      ? data[off] |
+        (data[off + 1] << 8) |
+        (data[off + 2] << 16) |
+        (data[off + 3] << 24)
+      : (data[off] << 24) |
+        (data[off + 1] << 16) |
+        (data[off + 2] << 8) |
+        data[off + 3];
+
+  const tiffOffset = offset;
+  const firstIFDOffset = readU32(offset + 4);
+  const ifdOffset = tiffOffset + firstIFDOffset;
+  const numEntries = readU16(ifdOffset);
+
+  for (let i = 0; i < numEntries; i++) {
+    const entryOffset = ifdOffset + 2 + i * 12;
+    const tag = readU16(entryOffset);
+    const type = readU16(entryOffset + 2);
+    const count = readU32(entryOffset + 4);
+    const valueOffset = entryOffset + 8;
+
+    if (tag === 0x9286) {
+      // UserComment
+      let valuePtr = readU32(valueOffset);
+      if (count <= 4) {
+        valuePtr = valueOffset; // value is embedded directly
+      } else {
+        valuePtr = tiffOffset + valuePtr;
+      }
+
+      const raw = data.slice(valuePtr, valuePtr + count);
+      // Skip known EXIF encodings
+      const asciiPrefix = "ASCII\0\0\0";
+      const utf8Prefix = "UTF8\0\0\0";
+      const header = String.fromCharCode(...raw.slice(0, 8));
+
+      let comment = "";
+
+      if (header.startsWith(asciiPrefix) || header.startsWith(utf8Prefix)) {
+        comment = new TextDecoder("utf-8").decode(raw.slice(8));
+      } else {
+        // fallback: try decode full raw
+        comment = new TextDecoder("utf-8").decode(raw);
+      }
+
+      return comment;
+    }
+  }
+
+  return undefined;
+}

@@ -128,3 +128,12 @@ export type ParsedMetadata =
   | { format: "png"; chunks: PngChunk[] }
   | { format: "jpeg"; segments: JpegSegment[] }
   | { format: "webp"; chunks: WebPChunk[] };
+
+export type CharRawData = {
+  spec: string;
+  spec_version: string;
+  data: any;
+  [key: string]: any;
+};
+
+export class CharacterCardParserError extends Error {}
