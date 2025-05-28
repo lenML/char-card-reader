@@ -67,7 +67,7 @@ export class CharacterBook implements SpecV3.Lorebook {
     }
   }
 
-  public scan(
+  private _scan(
     context: string,
     matched: SpecV3.Lorebook["entries"] = [],
     current_depth = 1
@@ -75,19 +75,34 @@ export class CharacterBook implements SpecV3.Lorebook {
     if (current_depth >= (this.scan_depth ?? 10)) {
       return uniq(matched);
     }
-    const pending_entries = this.entries.filter((x) => !matched.includes(x));
+    const current_context = [
+      context,
+      ...uniq(matched).map((x) => x.content),
+    ].join("\n");
+    const pending_entries = this.entries
+      .filter((x) => x.content?.trim())
+      .filter((x) => x.enabled && !matched.includes(x));
     if (pending_entries.length === 0) {
       return uniq(matched);
     }
     for (const entry of pending_entries) {
-      const is_matched = entry.keys.some((k) => context.includes(k));
+      const is_matched = entry.keys.some((k) => current_context.includes(k));
       if (is_matched) {
         matched.push(entry);
       }
     }
     if (this.recursive_scanning) {
-      return this.scan(context, matched, current_depth + 1);
+      return this._scan(context, matched, current_depth + 1);
     }
     return uniq(matched);
+  }
+  public scan(context: string): SpecV3.Lorebook["entries"] {
+    const matched = this._scan(context);
+    const constant = this.entries.filter(
+      (x) => x.constant && x.enabled && x.content?.trim()
+    );
+    return uniq([...matched, ...constant]).sort(
+      (a, b) => a.insertion_order - b.insertion_order
+    );
   }
 }
