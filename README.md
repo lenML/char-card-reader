@@ -38,9 +38,7 @@ import fs from "fs";
 
   // Or load from JSON data
   const jsonData = {
-    name: "Example Character",
-    description: "A friendly AI assistant",
-    // ... other character properties
+    // character data, support v1/v2/v3 format
   };
   const jsonCard = CharacterCard.from_json(jsonData);
 
