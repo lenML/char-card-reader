@@ -3,12 +3,12 @@
 [![NPM Downloads](https://img.shields.io/npm/dm/%40lenml%2Fchar-card-reader)](https://www.npmjs.com/package/@lenml/char-card-reader)
 [![NPM Version](https://img.shields.io/npm/v/%40lenml%2Fchar-card-reader)](https://www.npmjs.com/package/@lenml/char-card-reader)
 
-A lightweight library for reading SillyTavern character card metadata from image files (PNG, JPEG, WEBP) without external dependencies.
+A lightweight library for reading SillyTavern character card metadata from image files (PNG, JPEG, WEBP) and JSON without external dependencies.
 
 ## Features
 
 - Supports character card specifications v1, v2, and v3
-- Extracts metadata from PNG, JPEG, and WEBP images
+- Extracts metadata from PNG, JPEG, WEBP images and JSON data
 - Provides conversion between different spec versions
 - Zero external dependencies
 - Works in both Node.js and browser environments
@@ -32,8 +32,17 @@ import { CharacterCard } from "@lenml/char-card-reader";
 import fs from "fs";
 
 (async () => {
+  // Load from image file
   const file = fs.readFileSync("./path/to/character.png");
   const card = await CharacterCard.from_file(file);
+
+  // Or load from JSON data
+  const jsonData = {
+    name: "Example Character",
+    description: "A friendly AI assistant",
+    // ... other character properties
+  };
+  const jsonCard = CharacterCard.from_json(jsonData);
 
   // Access card properties
   console.log("Character Name:", card.name);
@@ -59,10 +68,19 @@ import fs from "fs";
     const file = e.target.files[0];
     if (!file) return;
 
-    const arrayBuffer = await file.arrayBuffer();
-    const card = await CharacterCard.from_file(arrayBuffer);
-
-    console.log("Character Info:", card.toSpecV3());
+    // Load from image file
+    if (file.type.startsWith("image/")) {
+      const arrayBuffer = await file.arrayBuffer();
+      const card = await CharacterCard.from_file(arrayBuffer);
+      console.log("Character Info:", card.toSpecV3());
+    }
+    // Or load from JSON file
+    else if (file.type === "application/json") {
+      const jsonText = await file.text();
+      const jsonData = JSON.parse(jsonText);
+      const card = CharacterCard.from_json(jsonData);
+      console.log("Character Info:", card.toSpecV3());
+    }
   });
 </script>
 ```
@@ -74,6 +92,7 @@ import fs from "fs";
 #### Static Methods
 
 - `from_file(file: ArrayBuffer | Uint8Array): Promise<CharacterCard>` - Creates a CharacterCard instance from a file
+- `from_json(raw_data: CharRawData, fallback_avatar = ""): CharacterCard` - Creates a CharacterCard instance from JSON data
 
 #### Instance Properties
 
