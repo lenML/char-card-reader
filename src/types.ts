@@ -102,10 +102,31 @@ export namespace CharacterSpec {
   }
 }
 
+type PngChunkType =
+  | "IHDR"
+  | "sRGB"
+  | "gAMA"
+  | "pHYs"
+  | "tEXt"
+  | "IDAT"
+  | "IEND";
+
 export type PngChunk = {
-  type: string;
+  type: PngChunkType | ({} & string);
   length: number;
   crc: number;
+
+  // type === "IHDR"
+  width?: number;
+  height?: number;
+  bitDepth?: number;
+  colorType?: number;
+
+  // type === "tEXt"
+  text?: string;
+  keyword?: string;
+  rawText?: string;
+
   [key: string]: any;
 };
 

@@ -1,3 +1,4 @@
+// from https://github.com/kwaroran/character-card-spec-v3/blob/main/SPEC_V3.md
 export namespace SpecV3 {
   export type Lorebook = {
     name?: string;

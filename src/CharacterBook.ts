@@ -1,4 +1,4 @@
-import { SpecV3 } from "./spec_v3";
+import { SpecV3 } from "./spec_types/spec_v3";
 import { deepClone, uniq } from "./utils";
 
 // lorebook

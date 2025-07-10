@@ -1,3 +1,4 @@
+// from https://github.com/malfoyslastname/character-card-spec-v2/blob/main/spec_v2.md
 export namespace SpecV2 {
   export type TavernCardV2 = {
     spec: "chara_card_v2";

@@ -3,9 +3,9 @@ import {
   extractUserCommentFromWebPChunk,
   parseImageMetadata,
 } from "./MetadataReader";
-import { SpecV1 } from "./spec_v1";
-import { SpecV2 } from "./spec_v2";
-import { SpecV3 } from "./spec_v3";
+import { SpecV1 } from "./spec_types/spec_v1";
+import { SpecV2 } from "./spec_types/spec_v2";
+import { SpecV3 } from "./spec_types/spec_v3";
 import { CharacterCardParserError, CharRawData, ParsedMetadata } from "./types";
 import { CharacterSpec } from "./types";
 import {
@@ -41,12 +41,18 @@ export class CharacterCard {
   static parse_char_info(file: ArrayBuffer | Uint8Array, exif: ParsedMetadata) {
     let encoded_text: string | undefined;
 
+    // NOTE: About CCV3 keyword checkout this
+    // https://github.com/kwaroran/character-card-spec-v3/blob/f3a86af019fbd99f788f7a1155f399655b34ab35/SPEC_V3.md?plain=1#L22-L30
     if (exif.format === "png") {
-      const encoded = exif.chunks.find((x) => x.keyword === "chara");
-      encoded_text = encoded?.text;
+      const encoded_ccv_1_2 = exif.chunks.find((x) => x.keyword === "chara");
+      const encoded_ccv_3 = exif.chunks.find((x) => x.keyword === "ccv3");
+
+      encoded_text = encoded_ccv_3?.text ?? encoded_ccv_1_2?.text;
     } else if (exif.format === "jpeg") {
-      const encoded = exif.segments.find((x) => x.marker === "chara");
-      encoded_text = encoded?.comment;
+      const encoded_ccv_1_2 = exif.segments.find((x) => x.marker === "chara");
+      const encoded_ccv_3 = exif.segments.find((x) => x.marker === "ccv3");
+
+      encoded_text = encoded_ccv_3?.comment ?? encoded_ccv_1_2?.comment;
     } else if (exif.format === "webp") {
       const exifChunk = exif.chunks.find((x) => x.type === "EXIF");
       if (exifChunk) {
