@@ -46,7 +46,7 @@ export class CharacterCard {
     if (exif.format === "png") {
       const v1or2_keys = ["chara", "character_card"];
       const encoded_ccv_1_2 = exif.chunks.find((x) =>
-        v1or2_keys.some((y) => x.marker.toLowerCase() === y.toLowerCase())
+        v1or2_keys.some((y) => x.keyword?.toLowerCase() === y.toLowerCase())
       );
       const encoded_ccv_3 = exif.chunks.find((x) => x.keyword === "ccv3");
 
