@@ -1,12 +1,10 @@
 import { CharacterBook } from "./CharacterBook";
-import {
-  extractUserCommentFromWebPChunk,
-  parseImageMetadata,
-} from "./MetadataReader";
+import { parseImageMetadata } from "./metadata/parser";
 import { SpecV1 } from "./spec_types/spec_v1";
 import { SpecV2 } from "./spec_types/spec_v2";
 import { SpecV3 } from "./spec_types/spec_v3";
-import { CharacterCardParserError, CharRawData, ParsedMetadata } from "./types";
+import { CharacterCardParserError, CharRawData } from "./types";
+import { ParsedMetadata } from "./metadata/types";
 import { CharacterSpec } from "./types";
 import {
   Base64,
@@ -15,6 +13,8 @@ import {
   mergeObjects,
   toBase64,
 } from "./utils";
+import { WebP } from "./metadata/webp";
+import { JPEG } from "./metadata/jpeg";
 
 export class CharacterCard {
   static async from_file(file: ArrayBuffer | Uint8Array) {
@@ -44,23 +44,28 @@ export class CharacterCard {
     // NOTE: About CCV3 keyword checkout this
     // https://github.com/kwaroran/character-card-spec-v3/blob/f3a86af019fbd99f788f7a1155f399655b34ab35/SPEC_V3.md?plain=1#L22-L30
     if (exif.format === "png") {
-      const encoded_ccv_1_2 = exif.chunks.find((x) => x.keyword === "chara");
+      const v1or2_keys = ["chara", "character_card"];
+      const encoded_ccv_1_2 = exif.chunks.find((x) =>
+        v1or2_keys.some((y) => x.marker.toLowerCase() === y.toLowerCase())
+      );
       const encoded_ccv_3 = exif.chunks.find((x) => x.keyword === "ccv3");
 
       encoded_text = encoded_ccv_3?.text ?? encoded_ccv_1_2?.text;
     } else if (exif.format === "jpeg") {
-      const encoded_ccv_1_2 = exif.segments.find((x) => x.marker === "chara");
-      const encoded_ccv_3 = exif.segments.find((x) => x.marker === "ccv3");
-
-      encoded_text = encoded_ccv_3?.comment ?? encoded_ccv_1_2?.comment;
+      const exif_chunk = exif.segments.find((x) => x.type === "EXIF");
+      const exif_text = JPEG.extract_user_comment(
+        file instanceof Uint8Array ? file : new Uint8Array(file),
+        exif_chunk
+      );
+      encoded_text = exif_text;
     } else if (exif.format === "webp") {
-      const exifChunk = exif.chunks.find((x) => x.type === "EXIF");
-      if (exifChunk) {
-        const exifData = extractUserCommentFromWebPChunk(
+      const exif_chunk = exif.chunks.find((x) => x.type === "EXIF");
+      if (exif_chunk) {
+        const exif_data = WebP.extract_user_comment(
           file instanceof Uint8Array ? file : new Uint8Array(file),
-          exifChunk
+          exif_chunk
         );
-        encoded_text = exifData;
+        encoded_text = exif_data;
       }
     }
 
@@ -360,7 +365,7 @@ export class CharacterCard {
    */
 
   public clone(version = "v3" as "v1" | "v2" | "v3") {
-    let new_raw_data = null;
+    let new_raw_data: any = null;
     switch (version) {
       case "v1": {
         new_raw_data = this.toSpecV1();
